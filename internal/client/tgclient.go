@@ -3,16 +3,17 @@ package tg
 import (
 	"errors"
 	"fmt"
+	app2 "github.com/KillReall666/Antispam-tg-bot/internal/model/app"
+	"github.com/KillReall666/Antispam-tg-bot/internal/service/app"
 	"log"
 	"strings"
 
-	"github.com/KillReall666/Antispam-tg-bot/internal/model"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-type HandlerFunc func(tgUpdate tgbotapi.Update, c *Client, msgModel *message.Model)
+type HandlerFunc func(tgUpdate tgbotapi.Update, c *Client, msgModel *app.Service)
 
-func (f HandlerFunc) RunFunc(tgUpdate tgbotapi.Update, c *Client, msgModel *message.Model) {
+func (f HandlerFunc) RunFunc(tgUpdate tgbotapi.Update, c *Client, msgModel *app.Service) {
 	f(tgUpdate, c, msgModel)
 }
 
@@ -22,13 +23,13 @@ type Client struct {
 }
 
 type TokenGetter interface {
-	Token() string
+	GetToken() string
 }
 
 func New(tokenGetter TokenGetter, handleProcessingFunc HandlerFunc) (*Client, error) {
-	client, err := tgbotapi.NewBotAPI(tokenGetter.Token())
+	client, err := tgbotapi.NewBotAPI(tokenGetter.GetToken())
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("NewBotAPI error: %v", err))
+		return nil, errors.New(fmt.Sprintf("newBotAPI error: %v", err))
 	}
 	return &Client{
 		client:               client,
@@ -36,17 +37,27 @@ func New(tokenGetter TokenGetter, handleProcessingFunc HandlerFunc) (*Client, er
 	}, nil
 }
 
-func (c *Client) SendMessage(text string, userID int64) error {
+func (c *Client) SendMessageToBot(text string, userID int64) error {
 	msg := tgbotapi.NewMessage(userID, text)
 	msg.ParseMode = "markdown"
 	_, err := c.client.Send(msg)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error msg send client.Send: %v", err))
+		return errors.New(fmt.Sprintf("error msg send client.Send: %v", err))
 	}
 	return nil
 }
 
-func (c *Client) ListenUpdates(msgModel *message.Model) {
+func (c *Client) SendMessageToGroup(text string, groupID int64) error {
+	msg := tgbotapi.NewMessage(groupID, text)
+	msg.ParseMode = "markdown"
+	_, err := c.client.Send(msg)
+	if err != nil {
+		return errors.New(fmt.Sprintf("error msg send client.Send: %v", err))
+	}
+	return nil
+}
+
+func (c *Client) ListenUpdates(msgModel *app.Service) {
 	updateConf := tgbotapi.NewUpdate(0)
 	updateConf.Timeout = 60
 
@@ -60,15 +71,17 @@ func (c *Client) ListenUpdates(msgModel *message.Model) {
 }
 
 // ProcessingMessages функция обработки сообщений
-func ProcessingMessages(tgUpdate tgbotapi.Update, c *Client, msgModel *message.Model) {
+func ProcessingMessages(tgUpdate tgbotapi.Update, c *Client, msgModel *app.Service) {
 	if tgUpdate.Message != nil {
 		//Пользователь написал сообщение
-		log.Println(fmt.Sprintf("[%s][%v] %s", tgUpdate.Message.From.UserName, tgUpdate.Message.From.ID, tgUpdate.Message.Text))
-		err := msgModel.IncomingMessage(message.Message{
+		log.Println(fmt.Sprintf("userName:[%s] userID:[%v] chatID:[%v] messageID:[%v]: %s", tgUpdate.Message.From.UserName, tgUpdate.Message.From.ID, tgUpdate.Message.Chat.ID, tgUpdate.Message.MessageID, tgUpdate.Message.Text))
+		err := msgModel.IncomingMessage(app2.Message{
 			Text:            tgUpdate.Message.Text,
 			UserID:          tgUpdate.Message.From.ID,
 			UserName:        tgUpdate.Message.From.UserName,
 			UserDisplayName: strings.TrimSpace(tgUpdate.Message.From.FirstName + " " + tgUpdate.Message.From.LastName),
+			GroupID:         tgUpdate.Message.Chat.ID,
+			MessageID:       tgUpdate.Message.MessageID,
 		})
 		if err != nil {
 			log.Println(fmt.Sprintf("error processing message: %v", err))

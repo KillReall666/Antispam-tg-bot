@@ -1,0 +1,9 @@
+clientID: "1dd112d8-c0e9-46a9-8b62-de971a75aed0"
+clientSecret: "85db9e0a-9efe-4151-957d-d16f4bc96551"
+authDataHash: "MWRkMTEyZDgtYzBlOS00NmE5LThiNjItZGU5NzFhNzVhZWQwOjg1ZGI5ZTBhLTllZmUtNDE1MS05NTdkLWQxNmY0YmM5NjU1MQ=="
+scope: "GIGACHAT_API_PERS"
+
+authUrl: "https://ngw.devices.sberbank.ru:9443/api/"
+requestUrl: "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
+
+redis_addr: "localhost:6379"

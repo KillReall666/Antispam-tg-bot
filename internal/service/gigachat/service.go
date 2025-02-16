@@ -1,6 +1,7 @@
 package gigachat
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/base64"
@@ -9,6 +10,10 @@ import (
 	"github.com/KillReall666/Antispam-tg-bot/internal/config/gigachatcfg"
 	"github.com/KillReall666/Antispam-tg-bot/internal/model/gigachat"
 	"github.com/KillReall666/Antispam-tg-bot/internal/storage/redis"
+	"github.com/hupe1980/go-huggingface"
+	"github.com/rabbitmq/rabbitmq-stream-go-client/pkg/amqp"
+	"github.com/rabbitmq/rabbitmq-stream-go-client/pkg/stream"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,6 +23,7 @@ import (
 	"strings"
 )
 
+// Тут нам надо подключить не саму БД а интерфейс типа UserRepository repository.UserRepository  (в New тоже самое) а сам интерфейс описать на уровне storage
 type Service struct {
 	cfg       *gigachatcfg.GigachatConfig
 	client    *http.Client
@@ -38,6 +44,38 @@ func New(cfg *gigachatcfg.GigachatConfig, redis *redis.RedisClient) *Service {
 		client: &client,
 		redis:  redis,
 	}
+}
+
+// Consumer Receiving messages from tg bot
+func (s *Service) Consumer() {
+	env, err := stream.NewEnvironment(stream.NewEnvironmentOptions())
+	if err != nil {
+		log.Fatalf("Failed to create environment: %v", err)
+	}
+
+	streamName := "app-gigachat-stream"
+	env.DeclareStream(streamName,
+		&stream.StreamOptions{
+			MaxLengthBytes: stream.ByteCapacity{}.GB(2),
+		},
+	)
+
+	messagesHandler := func(consumerContext stream.ConsumerContext, message *amqp.Message) {
+		log.Printf("Stream: %s - Received message: %s\n", consumerContext.Consumer.GetStreamName(),
+			message.Data)
+	}
+
+	consumer, err := env.NewConsumer(streamName, messagesHandler,
+		stream.NewConsumerOptions().SetOffset(stream.OffsetSpecification{}.First()))
+	if err != nil {
+		log.Fatalf("Failed to create consumer: %v", err)
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+	log.Println(" [x] Waiting for messages. enter to close the consumer")
+	_, _ = reader.ReadString('\n')
+	err = consumer.Close()
+
 }
 
 func (s *Service) GetAccessTokenAuthRequests() {
@@ -78,8 +116,6 @@ func (s *Service) GetAccessTokenAuthRequests() {
 	if err != nil {
 		log.Println("err to set redis key: ", err)
 	}
-
-	//fmt.Println(*s.token, "expires at", *s.expiresAr)
 }
 
 func (s *Service) Print() {
@@ -149,4 +185,19 @@ func (s *Service) GetRequest(userName string) {
 	}
 
 	//fmt.Println(completion.Choices.Message)
+}
+
+func (s *Service) HuggingFaceAPIRequest() {
+	ic := huggingface.NewInferenceClient("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")
+
+	res, err := ic.TextGeneration(context.Background(), &huggingface.TextGenerationRequest{
+		Inputs: "Can you speak russian?",
+		Model:  "BlinkDL/rwkv-5-world",
+	})
+
+	if err != nil {
+		log.Println("hugging api err: ", err)
+	}
+
+	fmt.Println(res[0].GeneratedText)
 }

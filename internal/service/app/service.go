@@ -8,9 +8,10 @@ import (
 	"fmt"
 	"github.com/KillReall666/Antispam-tg-bot/internal/config/appcfg"
 	"github.com/KillReall666/Antispam-tg-bot/internal/model/app"
+	"github.com/rabbitmq/rabbitmq-stream-go-client/pkg/amqp"
+	"github.com/rabbitmq/rabbitmq-stream-go-client/pkg/stream"
 	"log"
 	"net/http"
-	"strings"
 )
 
 type MessageSender interface {
@@ -23,6 +24,7 @@ type UserUnderAttackStorage interface {
 	//DB METHODS
 }
 
+// Тут нам надо подключить не саму БД а интерфейс типа UserRepository repository.UserRepository  (в New тоже самое) а сам интерфейс описать на уровне storage
 type Service struct {
 	ctx      context.Context
 	tgClient MessageSender // Клиент.
@@ -39,13 +41,36 @@ func New(ctx context.Context, tgClient MessageSender, userUnderAttack UserUnderA
 	}
 }
 
+/*
 func (s *Service) IncomingMessage(msg app.Message) error {
 	if strings.Contains(msg.Text, "колбаса") {
 		err := s.DeleteMessageFromGroup(msg.GroupID, msg.MessageID)
 		log.Println("err deleted message from group:", err)
 	}
 	return nil
+}
 
+*/
+
+// Producer Sending messages to tg bot
+func (s *Service) Producer(msg app.Message) error {
+	env, err := stream.NewEnvironment(stream.NewEnvironmentOptions())
+	streamName := "app-gigachat-stream"
+	env.DeclareStream(streamName, &stream.StreamOptions{
+		MaxLengthBytes: stream.ByteCapacity{}.GB(2),
+	})
+
+	producer, err := env.NewProducer(streamName, stream.NewProducerOptions())
+	if err != nil {
+		log.Println("failed to create producer", err)
+	}
+
+	err = producer.Send(amqp.NewMessage([]byte(msg.Text)))
+	if err != nil {
+		log.Fatalf("Failed to send message: %v", err)
+	}
+
+	return nil
 }
 
 func (s *Service) DeleteMessageFromGroup(groupID int64, messageID int) error {

@@ -11,6 +11,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+//Добавить коммит
 type HandlerFunc func(tgUpdate tgbotapi.Update, c *Client, msgModel *app.Service)
 
 func (f HandlerFunc) RunFunc(tgUpdate tgbotapi.Update, c *Client, msgModel *app.Service) {
@@ -75,7 +76,7 @@ func ProcessingMessages(tgUpdate tgbotapi.Update, c *Client, msgModel *app.Servi
 	if tgUpdate.Message != nil {
 		//Пользователь написал сообщение
 		log.Println(fmt.Sprintf("userName:[%s] userID:[%v] chatID:[%v] messageID:[%v]: %s", tgUpdate.Message.From.UserName, tgUpdate.Message.From.ID, tgUpdate.Message.Chat.ID, tgUpdate.Message.MessageID, tgUpdate.Message.Text))
-		err := msgModel.IncomingMessage(app2.Message{
+		err := msgModel.Producer(app2.Message{
 			Text:            tgUpdate.Message.Text,
 			UserID:          tgUpdate.Message.From.ID,
 			UserName:        tgUpdate.Message.From.UserName,

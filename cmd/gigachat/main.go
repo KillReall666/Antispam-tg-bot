@@ -22,9 +22,10 @@ func main() {
 	log.Println("connection to redis established:", pong)
 
 	service := gigachat.New(cfg, redisClient)
-	service.Print()
-	service.GetAccessTokenAuthRequests()
-	service.GetRequest("userName")
+	//service.GetAccessTokenAuthRequests()
+	//service.GetRequest("userName")
+	//service.Consumer()
+	service.HuggingFaceAPIRequest()
 
 	err = http.ListenAndServe(":8080", nil)
 	if err != nil {

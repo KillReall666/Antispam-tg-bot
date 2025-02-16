@@ -11,7 +11,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// Добавить коммит 3
+// Добавить коммит 4
 type HandlerFunc func(tgUpdate tgbotapi.Update, c *Client, msgModel *app.Service)
 
 func (f HandlerFunc) RunFunc(tgUpdate tgbotapi.Update, c *Client, msgModel *app.Service) {
